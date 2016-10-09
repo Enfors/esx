@@ -29,7 +29,6 @@ Available commands:
     ecd      - cd command that makes it easy to switch back and
                forth between two directories.
     ejunk    - Move files to a junk directory
-    eeject   - Eject the tape in \$eset_tape_device, if any.
     ematch   - Find matching lines in all files recursively.
     emark    - Mark files / directories for later operation.
     ecopy    - Copy marked files to specified directory.
@@ -69,11 +68,6 @@ If you type 'ejunk' without an argument, the contents of your junk
 directory is listed."
 	    ;;
 
-	"eeject")
-	    echo \
-"This command ejects the tape if the previous command was successful."
-            ;;
-	    
          "ematch")
             echo \
 "To list all matching lines in all files in the current directory and its
@@ -90,22 +84,6 @@ type:
 Note that if you use wildcards, then you need to quote that argument."
             ;;
 	
-#	"esend")
-#	    echo \
-#"To send a file to a different host, type:
-#
-#  $ esend hostname file
-#
-#To send several files, type:
-#
-#  $ esend hostname file1 file2 ... fileN
-#
-#The files will be queued for sending on tape. For information on how to
-#send the files to tape, type:
-#
-#  $ ehelp esync"
-#	    ;;
-#
 	"eset")
 	    echo \
 "To show all settings, type:
@@ -175,23 +153,6 @@ ejunk() {
 
     mv $* $HOME/junk
     return $?
-}
-
-eeject() {
-    if [ $? -ne 0 ]; then
-	EsxError "eeject: Previous command failed; tape not ejected."
-	return $?
-    fi
-
-    mt -f $eset_tape_device offline
-
-    if [ $? -eq 0 ]; then
-	echo "Tape ejected."
-	return 0
-    else
-	EsxError "eeject: eject command failed."
-	return 1
-    fi
 }
 
 ematch() {
@@ -286,11 +247,6 @@ eclear() {
     echo "All marks cleared."
 }
 
-esend() {
-    MkSyncDir
-    echo "(Unimplemented)"
-}
-
 eset() {
     if [ -z "$*" ]; then
         ShowSettings
@@ -310,14 +266,10 @@ eset() {
 	    ESetPWDPrompt $2
 	    ;;
 
-	"tape_device")
-	    ESetTapeDevice $2
-	    ;;
-
-        "prompt_color")
-            ESetPromptColor $2
-            AutoSaveSettings
-            ;;
+#        "prompt_color")
+#            ESetPromptColor $2
+#            AutoSaveSettings
+#            ;;
 
 	*)
 	    EsxError "eset: Unknown option: '$1'"
@@ -374,160 +326,101 @@ EAskWithDefault() {
 # ESet functions
 #
 
-# ESetInputMode() {
-#     if [ -z "$1" ]; then
-# 	echo "The setting 'input_mode' is currently set to: $eset_input_mode"
-# 	echo "To change it, type:"
-# 	echo
-# 	echo "  $ eset input_mode (value)"
-# 	echo
-# 	echo "Valid values are: "
-# 	echo "  emacs - Emacs mode. Arrow keys work as expected."
-# 	echo "  vi    - Vi mode."
-# 	return 0
-#     fi
+#ESetPWDPrompt() {
+#    if [ -z "$1" ]; then
+#	echo "The setting 'pwd_prompt' is currently set to: $eset_pwd_prompt"
+#	echo "To change it, type: "
+#	echo
+#	echo "  $ eset pwd_prompt (value)"
+#	echo
+#	echo "Valid values are:"
+#	echo "  full    - Show the preset working directory in the prompt."
+#	echo "  partial - Show only the last part of the PWD."
+#	echo "  off     - Do not show the PWD in the prompt."
+#	return 0
+#    fi
+#    
+#    case $1 in
+#	full)
+#	    ;;
+#	partial)
+#	    ;;
+#	off)
+#	    ;;
+#	*)
+#	    EsxError "eset: pwd_prompt must be set to full, parital or off."
+#	    return 1
+#	    ;;
+#    esac
+#
+#    eset_pwd_prompt=$1
+#    SetPrompt
+#    AutoSaveSettings
+#}
 
-#     case $1 in
-# 	"emacs")
-# 	    set -o emacs
-# 	    echo "Emacs keybindings enabled. Use arrow keys for history."
-# 	    ;;
-# 	"vi")
-# 	    set -o vi
-# 	    echo "Vi keybindings enabled."
-# 	    ;;
-# 	*)
-# 	    EsxError "eset: input_mode must be set to emacs or vi."
-# 	    echo "Vi keybindings enabled."
-# 	    return 1
-# 	    ;;
-#     esac
-
-#      eset_input_mode=$1
-#      AutoSaveSettings
-
-#      return 0
-# }
-
-ESetPWDPrompt() {
-    if [ -z "$1" ]; then
-	echo "The setting 'pwd_prompt' is currently set to: $eset_pwd_prompt"
-	echo "To change it, type: "
-	echo
-	echo "  $ eset pwd_prompt (value)"
-	echo
-	echo "Valid values are:"
-	echo "  full    - Show the preset working directory in the prompt."
-	echo "  partial - Show only the last part of the PWD."
-	echo "  off     - Do not show the PWD in the prompt."
-	return 0
-    fi
-    
-    case $1 in
-	full)
-	    ;;
-	partial)
-	    ;;
-	off)
-	    ;;
-	*)
-	    EsxError "eset: pwd_prompt must be set to full, parital or off."
-	    return 1
-	    ;;
-    esac
-
-    eset_pwd_prompt=$1
-    SetPrompt
-    AutoSaveSettings
-}
-
-ESetTapeDevice() {
-    if [ -z "$1" ]; then
-	echo \
-"This setting defines which tape device (usually /dev/rmt0) is used for
-tape related commands. It is currently set to $eset_tape_device.
-
-To change it, type:
-
-  $ eset tape_device (value)
-
-To reset it to the default (/dev/rmt0), type:
-
-  $ eset tape_device reset"
-    elif [ "$1" = "reset" ]; then
-	echo "Tape device reset to /dev/rmt0."
-	eset_tape_device="/dev/rmt0"
-    else
-	echo "Tape device set to $1."
-	eset_tape_device=$1
-    fi
-
-    AutoSaveSettings
-}
-
-ESetPromptColor() {
-    if [ -z "$1" ]; then
-        echo \
-"This setting allows you to set the color of your prompt, or turn prompt
-color off. It is currently set to $eset_prompt_color.
-
-To change it, type:
-
-  $ eset prompt_color (value)
-
-Valid values are:
-  green   - Make the prompt green.
-  blue    - Make the prompt blue.
-  cyan    - Make the prompt cyan - light blue.
-  magenta - Make the prompt magenta - purple.
-  yellow  - Make the prompt yellow.
-  red     - Make the prompt red.
-  off     - Disable color prompt."
-    else
-        case $1 in
-            "green")
-                prompt_color=$green
-                eset_prompt_color="green"
-                ;;
-
-            "blue")
-                prompt_color=$blue
-                eset_prompt_color="blue"
-                ;;
-
-            "cyan")
-                prompt_color=$cyan
-                eset_prompt_color="cyan"
-                ;;
-
-            "magenta")
-                prompt_color=$magenta
-                eset_prompt_color="magenta"
-                ;;
-
-            "yellow")
-                prompt_color=$yellow
-                eset_prompt_color="yellow"
-                ;;
-
-            "red")
-                prompt_color=$red
-                eset_prompt_color="red"
-                ;;
-
-            "off")
-                prompt_color="";
-                eset_prompt_color="off"
-                ;;
-
-            *)
-                EsxError "eset: Unkown color '$1'."
-                return 1
-                ;;
-        esac
-        SetPrompt
-    fi
-}
+#ESetPromptColor() {
+#    if [ -z "$1" ]; then
+#        echo \
+#"This setting allows you to set the color of your prompt, or turn prompt
+#color off. It is currently set to $eset_prompt_color.
+#
+#To change it, type:
+#
+#  $ eset prompt_color (value)
+#
+#Valid values are:
+#  green   - Make the prompt green.
+#  blue    - Make the prompt blue.
+#  cyan    - Make the prompt cyan - light blue.
+#  magenta - Make the prompt magenta - purple.
+#  yellow  - Make the prompt yellow.
+#  red     - Make the prompt red.
+#  off     - Disable color prompt."
+#    else
+#        case $1 in
+#            "green")
+#                prompt_color=$green
+#                eset_prompt_color="green"
+#                ;;
+#
+#            "blue")
+#                prompt_color=$blue
+#                eset_prompt_color="blue"
+#                ;;
+#
+#            "cyan")
+#                prompt_color=$cyan
+#                eset_prompt_color="cyan"
+#                ;;
+#
+#            "magenta")
+#                prompt_color=$magenta
+#                eset_prompt_color="magenta"
+#                ;;
+#
+#            "yellow")
+#                prompt_color=$yellow
+#                eset_prompt_color="yellow"
+#                ;;
+#
+#            "red")
+#                prompt_color=$red
+#                eset_prompt_color="red"
+#                ;;
+#
+#            "off")
+#                prompt_color="";
+#                eset_prompt_color="off"
+#                ;;
+#
+#            *)
+#                EsxError "eset: Unkown color '$1'."
+#                return 1
+#                ;;
+#        esac
+#        SetPrompt
+#    fi
+#}
 
 ESetAutoSave() {
     if [ -z "$1" ]; then
@@ -610,17 +503,17 @@ SetAliases() {
     alias ls="ls -F"
 }
 
-EnableArrowKeys() {
-    if [ "$EDITOR" == "vi" ]; then
-        echo \
-"ESX warning: EDITOR variable set to 'vi'; arrow keys may not work."
-    fi
-    alias __A=''
-    alias __B=''
-    alias __C=''
-    alias __D=''
-#    alias "	"=''
-}
+#EnableArrowKeys() {
+#    if [ "$EDITOR" == "vi" ]; then
+#        echo \
+#"ESX warning: EDITOR variable set to 'vi'; arrow keys may not work."
+#    fi
+#    alias __A=''
+#    alias __B=''
+#    alias __C=''
+#    alias __D=''
+##    alias "	"=''
+#}
 
 MkJunkDir() {
     if [ -z "$HOME" ]; then
@@ -635,22 +528,6 @@ MkJunkDir() {
     fi
 
     return 0
-}
-
-MkSyncDir() {
-    if [ -z "$HOME" ]; then
-	EsxError "MkSyncDir: HOME variable not set."
-	return 1
-    fi
-
-    sync_dir=$HOME/.esync
-
-    if [ ! -e "$sync_dir" ]; then
-	EsxRunCmd mkdir -m 700 $sync_dir
-	EsxRunCmd mkdir -m 700 $sync_dir/in
-	EsxRunCmd mkdir -m 700 $sync_dir/out
-	echo "$HOME/.esync directory created for queues."
-    fi
 }
 
 GetAbsolutePath() {
@@ -681,9 +558,9 @@ ShowSettings() {
     echo "============= ===================== ================"
     echo "autosave      Autosave settings     $eset_autosave"
 #    echo "input_mode    Emacs or vi keys      $eset_input_mode"
-    echo "pwd_prompt    Show PWD in prompt    $eset_pwd_prompt"
-    echo "tape_device   Tape device used      $eset_tape_device"
-    echo "prompt_color  Color of the prompt   $eset_prompt_color"
+#    echo "pwd_prompt    Show PWD in prompt    $eset_pwd_prompt"
+#    echo "tape_device   Tape device used      $eset_tape_device"
+#    echo "prompt_color  Color of the prompt   $eset_prompt_color"
     echo
     echo "For more information on a specific setting, type:"
     echo
@@ -736,9 +613,9 @@ LoadSettings() {
 
 SetDefaultSettings() {
     if [ -z "$eset_autosave"     ]; then eset_autosave="on";           fi
-    if [ -z "$eset_pwd_prompt"   ]; then eset_pwd_prompt="partial";    fi
-    if [ -z "$eset_tape_device"  ]; then eset_tape_device="/dev/rmt0"; fi    
-    if [ -z "$eset_prompt_color" ]; then ESetPromptColor blue;         fi
+#    if [ -z "$eset_pwd_prompt"   ]; then eset_pwd_prompt="partial";    fi
+#    if [ -z "$eset_tape_device"  ]; then eset_tape_device="/dev/rmt0"; fi    
+#    if [ -z "$eset_prompt_color" ]; then ESetPromptColor blue;         fi
 }
 
 SaveSettings() {
@@ -746,9 +623,9 @@ SaveSettings() {
     umask 033
     echo "autosave $eset_autosave"         >  $HOME/$rc_file
 #    echo "input_mode $eset_input_mode"     >> $HOME/$rc_file
-    echo "pwd_prompt $eset_pwd_prompt"     >> $HOME/$rc_file
-    echo "tape_device $eset_tape_device"   >> $HOME/$rc_file
-    echo "prompt_color $eset_prompt_color" >> $HOME/$rc_file
+#    echo "pwd_prompt $eset_pwd_prompt"     >> $HOME/$rc_file
+#    echo "tape_device $eset_tape_device"   >> $HOME/$rc_file
+#    echo "prompt_color $eset_prompt_color" >> $HOME/$rc_file
     echo "Settings saved."
 
     return 0
@@ -771,17 +648,11 @@ ShowNewUserInfo() {
     echo "ESX enhances and configures the standard Korn shell with some"
     echo "extra features, such as, among other things:"
     echo
-    echo "  - You can use arrow keys to step through your command line"
-    echo "    history, and to go left and right on the current line."
-    echo "  - You can use tab-style filename completion by pressing the"
-    echo "    Escape key twice."
-    echo "  - You can have the present working directory (PWD) fully or"
-    echo "    partially displayed in your prompt."
     echo "  - ESX provides an 'ecd' command which works like the ordinary"
     echo "    cd command, except that if you type only 'ecd', it takes"
     echo "    you back to the previous directory."
-    echo "  - You can make the prompt have a different color from other"
-    echo "    text."
+    echo "  - You can 'emark' files one by one, which you can then 'ecopy'"
+    echo "    together to the same destination directory."
     echo "================================================================="
 }
 
@@ -833,8 +704,8 @@ Main() {
 
     LoadSettings
 
-    EnableArrowKeys
-    SetPrompt
+#    EnableArrowKeys
+#    SetPrompt
     SetAliases
 
     return 0
