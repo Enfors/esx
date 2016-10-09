@@ -13,7 +13,7 @@ reset="${CSI}0m"
 
 rc_file=".esxrc"
 
-export ESX_VERSION="1.14"
+export ESX_VERSION="2.0"
 
 # #
 # # Command functions (meant for interactive use)
